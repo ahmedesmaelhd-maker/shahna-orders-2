@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="شَحنة — نظام احترافي لإدارة الطلبات والعملاء وطباعة ملصقات الشحن.">
+  <title>شَحنة | إدارة المتجر والشحن</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div id="toast-region" class="toast-region" aria-live="polite"></div>
+
+  <!-- Cloud connection / first-time setup -->
+  <section id="setup-screen" class="setup-screen hidden">
+    <div class="setup-card">
+      <div class="brand-mark large"><i data-lucide="package-check"></i></div>
+      <p class="eyebrow">SHAHNA CLOUD</p>
+      <h1>خلّينا نوصل شَحنة بقاعدة بياناتك</h1>
+      <p class="muted intro">أدخل بيانات مشروع Supabase مرة واحدة على هذا الجهاز، أو ضعها في ملف <code>config.js</code> قبل نشر الموقع ليعمل على كل الأجهزة.</p>
+      <form id="setup-form" class="stack-form">
+        <label>رابط مشروع Supabase
+          <input id="setup-url" type="url" required placeholder="https://xxxxxxxx.supabase.co" autocomplete="url" dir="ltr">
+        </label>
+        <label>مفتاح النشر (Publishable key أو anon key)
+          <textarea id="setup-key" rows="3" required placeholder="sb_publishable_... أو مفتاح anon القديم" dir="ltr" spellcheck="false"></textarea>
+        </label>
+        <button class="btn primary full" type="submit"><i data-lucide="plug-zap"></i> حفظ بيانات الاتصال والاختبار</button>
+      </form>
+      <div class="notice warning"><i data-lucide="shield-alert"></i><div><b>تنبيه أمان</b><br>استخدم مفتاح النشر العام فقط. لا تضع أبدًا مفتاح <code>service_role</code> أو أي Secret key داخل الموقع.</div></div>
+      <div class="setup-actions"><a href="SETUP_AR.md" target="_blank" rel="noopener">دليل الإعداد الكامل</a><span>•</span><button class="text-btn" id="use-config-js" type="button">استخدام إعدادات ملف config.js</button></div>
+    </div>
+  </section>
+
+  <!-- Auth screen -->
+  <section id="auth-screen" class="auth-screen hidden">
+    <div class="auth-art">
+      <div class="auth-art-top">
+        <div class="brand-lockup light"><span class="brand-mark"><i data-lucide="package-check"></i></span><span><b>شَحنة</b><small>إدارة متجرك بذكاء</small></span></div>
+        <span class="pill dark-pill"><span class="live-dot"></span> نظام سحابي</span>
+      </div>
+      <div class="art-content">
+        <div class="art-chip"><i data-lucide="zap"></i> كل الطلبات في مكان واحد</div>
+        <h2>من أول أوردر<br>لحد باب العميل.</h2>
+        <p>نظّم الطلبات، تابع التحصيل، واطبع ملصقات الشحن من لوحة واحدة مصممة لشغلك اليومي.</p>
+        <div class="mini-dashboard">
+          <div class="mini-top"><span>نظرة سريعة</span><span class="mini-dot-row">•••</span></div>
+          <div class="mini-stats"><div><small>طلبات اليوم</small><b>24</b><span>↑ متابعة أسهل</span></div><div><small>قيد التجهيز</small><b>08</b><span>بحاجة للمراجعة</span></div></div>
+          <div class="mini-bars"><i style="height:35%"></i><i style="height:52%"></i><i style="height:44%"></i><i style="height:70%"></i><i style="height:62%"></i><i style="height:88%"></i><i style="height:76%"></i><i style="height:100%"></i><i style="height:82%"></i><i style="height:90%"></i></div>
+        </div>
+      </div>
+      <div class="art-footer"><span><i data-lucide="lock-keyhole"></i> اتصال آمن</span><span><i data-lucide="cloud"></i> بيانات متزامنة</span><span><i data-lucide="printer"></i> طباعة جاهزة</span></div>
+    </div>
+    <div class="auth-panel">
+      <div class="auth-panel-top"><span class="mobile-brand"><span class="brand-mark"><i data-lucide="package-check"></i></span><b>شَحنة</b></span><span class="secure-caption"><i data-lucide="shield-check"></i> دخول آمن</span></div>
+      <div class="auth-box">
+        <div id="auth-heading-block"><p class="eyebrow">أهلًا بك من جديد</p><h1 id="auth-title">سجّل دخولك</h1><p id="auth-subtitle" class="muted">أدخل بيانات حسابك للوصول إلى لوحة المتجر.</p></div>
+        <div class="auth-tabs" role="tablist" aria-label="طريقة الدخول"><button type="button" class="auth-tab active" data-auth-mode="login">تسجيل الدخول</button><button type="button" class="auth-tab" data-auth-mode="signup">إنشاء حساب</button></div>
+        <form id="auth-form" class="stack-form">
+          <label id="store-name-wrap" class="hidden">اسم المتجر
+            <input id="auth-store" type="text" placeholder="مثال: متجر شَحنة" autocomplete="organization">
+          </label>
+          <label>البريد الإلكتروني
+            <div class="input-icon"><i data-lucide="mail"></i><input id="auth-email" type="email" required placeholder="name@example.com" autocomplete="email" dir="ltr"></div>
+          </label>
+          <label>كلمة المرور
+            <div class="input-icon"><i data-lucide="key-round"></i><input id="auth-password" type="password" required minlength="8" placeholder="8 أحرف على الأقل" autocomplete="current-password" dir="ltr"><button class="reveal-btn" type="button" data-reveal="auth-password" aria-label="إظهار كلمة المرور"><i data-lucide="eye"></i></button></div>
+          </label>
+          <button id="auth-submit" class="btn primary full" type="submit">تسجيل الدخول <i data-lucide="arrow-left"></i></button>
+        </form>
+        <button id="forgot-password" class="text-btn forgot-link" type="button">نسيت كلمة المرور؟</button>
+        <div id="recovery-panel" class="recovery-panel hidden">
+          <h3>تعيين كلمة مرور جديدة</h3><p class="muted small">أدخل كلمة مرور جديدة لحسابك.</p>
+          <form id="recovery-form" class="stack-form"><label>كلمة المرور الجديدة<input id="new-password" type="password" minlength="8" required autocomplete="new-password"></label><button class="btn primary full" type="submit">حفظ كلمة المرور</button></form>
+        </div>
+        <div class="auth-bottom"><span class="secure-icon"><i data-lucide="lock"></i></span><p>بيانات المتجر محمية بسياسات وصول على قاعدة البيانات.<br><small>لا تشارك كلمة مرورك مع أي شخص.</small></p></div>
+      </div>
+      <p class="auth-copyright">شَحنة © <span id="auth-year"></span> · أدوات تساعد متجرك يكبر</p>
+    </div>
+  </section>
+
+  <!-- Main application -->
+  <div id="app-shell" class="app-shell hidden">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-brand"><div class="brand-mark"><i data-lucide="package-check"></i></div><div><b>شَحنة</b><small>لوحة إدارة المتجر</small></div><button id="mobile-sidebar-close" class="icon-btn sidebar-close" aria-label="إغلاق القائمة"><i data-lucide="x"></i></button></div>
+      <div class="store-mini"><div class="store-avatar" id="store-avatar">م</div><div class="store-mini-info"><b id="sidebar-store-name">متجري</b><small id="sidebar-user-email">الحساب الحالي</small></div><span class="online-indicator" title="متصل"></span></div>
+      <nav class="main-nav" aria-label="التنقل الرئيسي">
+        <p class="nav-label">مساحة العمل</p>
+        <button class="nav-link active" data-page="dashboard"><i data-lucide="layout-dashboard"></i><span>لوحة التحكم</span></button>
+        <button class="nav-link" data-page="orders"><i data-lucide="package"></i><span>الطلبات</span><span id="nav-order-count" class="nav-count">0</span></button>
+        <button class="nav-link" data-page="customers"><i data-lucide="users"></i><span>العملاء</span></button>
+        <button class="nav-link" data-page="reports"><i data-lucide="chart-no-axes-combined"></i><span>التقارير</span></button>
+        <p class="nav-label nav-label-bottom">إدارة</p>
+        <button class="nav-link" data-page="settings"><i data-lucide="settings-2"></i><span>إعدادات المتجر</span></button>
+      </nav>
+      <div class="sidebar-bottom"><div class="help-card"><span class="help-icon"><i data-lucide="lightbulb"></i></span><b>تلميحة سريعة</b><p>بعد حفظ الطلب، اطبع ملصق الشحن مباشرة من جدول الطلبات.</p><button id="help-open" class="help-link">طريقة الاستخدام <i data-lucide="arrow-up-left"></i></button></div><button id="signout-btn" class="signout-btn"><i data-lucide="log-out"></i><span>تسجيل الخروج</span></button><div class="sidebar-version"><span class="live-dot"></span> متصل بقاعدة البيانات السحابية</div></div>
+    </aside>
+    <div id="sidebar-scrim" class="sidebar-scrim"></div>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="topbar-start"><button id="mobile-menu-btn" class="icon-btn mobile-menu-btn" aria-label="فتح القائمة"><i data-lucide="menu"></i></button><div><div class="breadcrumb"><span>مساحة العمل</span><i data-lucide="chevron-left"></i><b id="breadcrumb-current">لوحة التحكم</b></div><p id="page-date" class="topbar-date">نظرة عامة على متجرك</p></div></div>
+        <div class="topbar-actions"><label class="global-search"><i data-lucide="search"></i><input id="global-search" type="search" placeholder="ابحث عن طلب أو عميل..." aria-label="بحث عام"><kbd>⌕</kbd></label><button id="refresh-btn" class="icon-btn" title="تحديث البيانات"><i data-lucide="refresh-cw"></i></button><button class="profile-button" id="profile-button"><span class="profile-avatar" id="top-avatar">م</span><span class="profile-text"><b id="top-store-name">متجري</b><small id="top-user-email">حساب المتجر</small></span><i data-lucide="chevron-down"></i></button></div>
+      </header>
+
+      <div id="loading-banner" class="loading-banner hidden"><span class="spinner"></span> جاري مزامنة بيانات المتجر...</div>
+
+      <section id="page-dashboard" class="page-section active">
+        <div class="welcome-row"><div><div class="eyebrow with-dot"><span class="live-dot"></span> ملخص المتجر</div><h1>صباح النشاط، <span id="welcome-store-name">صاحب المتجر</span> 👋</h1><p class="muted">إليك ما يحدث في متجرك. خلّص طلباتك أولًا بأول.</p></div><button class="btn primary" id="new-order-top"><i data-lucide="plus"></i> إنشاء طلب جديد</button></div>
+        <div class="stat-grid">
+          <article class="stat-card stat-dark"><div class="stat-top"><span>إجمالي الطلبات</span><span class="stat-icon"><i data-lucide="package"></i></span></div><div class="stat-number" id="stat-orders">0</div><div class="stat-foot"><span class="stat-foot-dot"></span> كل الطلبات المسجلة</div><div class="stat-decoration deco-boxes"><i data-lucide="boxes"></i></div></article>
+          <article class="stat-card"><div class="stat-top"><span>تحتاج تجهيز</span><span class="stat-icon violet"><i data-lucide="package-open"></i></span></div><div class="stat-number" id="stat-pending">0</div><div class="stat-foot"><span class="trend-neutral">متابعة</span><span>طلبات غير مكتملة</span></div><div class="stat-decoration pale"><i data-lucide="clock-3"></i></div></article>
+          <article class="stat-card"><div class="stat-top"><span>تم التسليم</span><span class="stat-icon green"><i data-lucide="check-check"></i></span></div><div class="stat-number" id="stat-delivered">0</div><div class="stat-foot"><span class="trend-up"><i data-lucide="trending-up"></i> مكتمل</span><span>طلبات وصلت للعملاء</span></div><div class="stat-decoration pale"><i data-lucide="badge-check"></i></div></article>
+          <article class="stat-card"><div class="stat-top"><span>تحصيل متوقع</span><span class="stat-icon amber"><i data-lucide="wallet"></i></span></div><div class="stat-number money-stat" id="stat-cod">0 <small>ج.م</small></div><div class="stat-foot"><span>على الطلبات غير المسلّمة</span></div><div class="stat-decoration pale"><i data-lucide="banknote"></i></div></article>
+        </div>
+        <div class="dashboard-grid">
+          <section class="panel recent-panel"><div class="panel-heading"><div><h2>أحدث الطلبات</h2><p class="muted small">آخر الطلبات التي أضفتها</p></div><button class="btn ghost small-btn" data-go-page="orders">عرض كل الطلبات <i data-lucide="arrow-left"></i></button></div><div id="recent-orders" class="recent-orders"><div class="empty-state compact"><span class="empty-icon"><i data-lucide="package-search"></i></span><b>لسه مفيش طلبات</b><p>أضف أول طلب وسيظهر هنا.</p></div></div></section>
+          <section class="panel quick-panel"><div class="panel-heading"><div><h2>اختصارات سريعة</h2><p class="muted small">وفّر وقتك في المهام المتكررة</p></div><span class="heading-icon"><i data-lucide="zap"></i></span></div><div class="quick-actions"><button id="quick-add-order" class="quick-action"><span class="quick-icon purple"><i data-lucide="file-plus-2"></i></span><span><b>إضافة طلب</b><small>سجّل طلب عميل جديد</small></span><i data-lucide="arrow-up-left" class="quick-arrow"></i></button><button id="quick-customers" class="quick-action"><span class="quick-icon blue"><i data-lucide="contact-round"></i></span><span><b>دليل العملاء</b><small>أرقام وعناوين عملائك</small></span><i data-lucide="arrow-up-left" class="quick-arrow"></i></button><button id="quick-export" class="quick-action"><span class="quick-icon orange"><i data-lucide="file-spreadsheet"></i></span><span><b>تصدير الطلبات</b><small>ملف CSV لبرنامج Excel</small></span><i data-lucide="download" class="quick-arrow"></i></button></div><div class="daily-note"><span><i data-lucide="sparkles"></i></span><div><b>نصيحة اليوم</b><p>راجع رقم الهاتف والعنوان قبل طباعة ورقة الشحن لتقليل أخطاء التوصيل.</p></div></div></section>
+        </div>
+        <section class="panel status-overview"><div class="panel-heading"><div><h2>حالة الطلبات</h2><p class="muted small">توزيع الأوردرات حسب المرحلة</p></div><button class="text-btn" data-go-page="orders">إدارة الطلبات <i data-lucide="arrow-left"></i></button></div><div id="status-breakdown" class="status-breakdown"></div></section>
+      </section>
+
+      <section id="page-orders" class="page-section">
+        <div class="page-heading-row"><div><p class="eyebrow">إدارة الشحنات</p><h1>الطلبات <span id="orders-page-count" class="heading-count">0</span></h1><p class="muted">تابع كل أوردر من لحظة تسجيله حتى التسليم.</p></div><button class="btn primary" id="new-order-page"><i data-lucide="plus"></i> إضافة طلب</button></div>
+        <div class="panel orders-panel"><div class="table-toolbar"><div class="toolbar-search"><i data-lucide="search"></i><input id="orders-search" type="search" placeholder="بحث بالطلب أو العميل أو الهاتف..."></div><div class="toolbar-filters"><select id="status-filter" aria-label="تصفية بالحالة"><option value="all">كل الحالات</option><option value="جديد">جديد</option><option value="قيد التجهيز">قيد التجهيز</option><option value="تم الشحن">تم الشحن</option><option value="تم التسليم">تم التسليم</option><option value="مرتجع">مرتجع</option><option value="ملغي">ملغي</option></select><button id="orders-export" class="btn outline"><i data-lucide="download"></i> تصدير CSV</button></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>رقم الطلب</th><th>العميل</th><th>المنتج</th><th>تاريخ الإضافة</th><th>المطلوب تحصيله</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody id="orders-tbody"></tbody></table></div><div id="orders-mobile-list" class="orders-mobile-list"></div><div id="orders-empty" class="empty-state hidden"><span class="empty-icon"><i data-lucide="package-search"></i></span><b>لا توجد طلبات مطابقة</b><p>جرّب تغيير البحث أو أضف طلبًا جديدًا.</p><button class="btn primary" id="empty-new-order"><i data-lucide="plus"></i> إنشاء طلب</button></div><div class="table-footer"><span id="orders-result-count">0 طلب</span><span><i data-lucide="cloud-check"></i> محفوظ في قاعدة البيانات السحابية</span></div></div>
+      </section>
+
+      <section id="page-customers" class="page-section">
+        <div class="page-heading-row"><div><p class="eyebrow">علاقات العملاء</p><h1>العملاء <span id="customers-page-count" class="heading-count">0</span></h1><p class="muted">بيانات العملاء التي تم حفظها أثناء تجهيز الطلبات.</p></div><button id="customers-export" class="btn outline"><i data-lucide="download"></i> تصدير العملاء</button></div>
+        <div class="customer-summary-grid"><div class="customer-summary"><span class="summary-icon blue"><i data-lucide="users"></i></span><div><small>إجمالي العملاء</small><b id="customer-total">0</b></div></div><div class="customer-summary"><span class="summary-icon green"><i data-lucide="user-check"></i></span><div><small>عملاء لديهم طلبات مسلّمة</small><b id="customer-delivered">0</b></div></div><div class="customer-summary"><span class="summary-icon purple"><i data-lucide="repeat-2"></i></span><div><small>عملاء متكررون</small><b id="customer-repeat">0</b></div></div></div>
+        <div class="panel"><div class="table-toolbar"><div class="toolbar-search"><i data-lucide="search"></i><input id="customers-search" type="search" placeholder="ابحث بالاسم أو رقم الهاتف أو المحافظة..."></div><span id="customers-results-label" class="muted small"></span></div><div class="table-wrap"><table class="data-table"><thead><tr><th>العميل</th><th>رقم الهاتف</th><th>المحافظة / المدينة</th><th>العنوان</th><th>عدد الطلبات</th><th>آخر طلب</th><th>إجراء</th></tr></thead><tbody id="customers-tbody"></tbody></table></div><div id="customers-mobile-list" class="orders-mobile-list"></div><div id="customers-empty" class="empty-state hidden"><span class="empty-icon"><i data-lucide="users"></i></span><b>لا يوجد عملاء بعد</b><p>عند تسجيل طلب جديد وحفظ بيانات العميل، سيظهر هنا.</p></div></div>
+      </section>
+
+      <section id="page-reports" class="page-section">
+        <div class="page-heading-row"><div><p class="eyebrow">الأرقام والمؤشرات</p><h1>التقارير</h1><p class="muted">ملخص مالي وتشغيلي مستخرج من الطلبات المسجلة.</p></div><button id="report-export" class="btn outline"><i data-lucide="download"></i> تنزيل التقرير CSV</button></div>
+        <div class="report-kpi-grid"><div class="report-kpi"><span class="summary-icon purple"><i data-lucide="receipt-text"></i></span><small>قيمة المنتجات</small><b id="report-products">0 ج.م</b><span>قبل الشحن والخصومات</span></div><div class="report-kpi"><span class="summary-icon blue"><i data-lucide="truck"></i></span><small>إجمالي الشحن</small><b id="report-shipping">0 ج.م</b><span>على كل الطلبات</span></div><div class="report-kpi"><span class="summary-icon green"><i data-lucide="wallet"></i></span><small>تم تحصيله من العملاء</small><b id="report-paid">0 ج.م</b><span>الدفعات المقدمة المسجلة</span></div><div class="report-kpi"><span class="summary-icon orange"><i data-lucide="rotate-ccw"></i></span><small>طلبات ملغاة / مرتجعة</small><b id="report-returned">0</b><span>راجع أسبابها قبل التسوية</span></div></div>
+        <div class="report-grid"><section class="panel"><div class="panel-heading"><div><h2>الطلبات حسب الحالة</h2><p class="muted small">عدد الأوردرات في كل مرحلة</p></div></div><div id="report-status-chart" class="report-status-chart"></div></section><section class="panel"><div class="panel-heading"><div><h2>آخر 7 أيام</h2><p class="muted small">عدد الطلبات حسب تاريخ الإضافة</p></div></div><div id="report-week-chart" class="week-chart"></div></section></div>
+        <div class="notice info report-note"><i data-lucide="info"></i><p>هذه التقارير لمتابعة الطلبات والتحصيل وليست قائمة أرباح؛ الربح الحقيقي يحتاج إضافة تكلفة شراء كل منتج والمصروفات الأخرى.</p></div>
+      </section>
+
+      <section id="page-settings" class="page-section">
+        <div class="page-heading-row"><div><p class="eyebrow">خصص مساحة عملك</p><h1>إعدادات المتجر</h1><p class="muted">البيانات التي ستظهر على ورقة الشحن وتفضيلات حسابك.</p></div></div>
+        <div class="settings-grid"><section class="panel settings-panel"><div class="settings-title"><span class="settings-icon"><i data-lucide="store"></i></span><div><h2>بيانات المتجر</h2><p class="muted small">تظهر هذه البيانات أعلى ملصق الشحن.</p></div></div><form id="settings-form" class="settings-form"><label>اسم المتجر<input id="settings-store-name" type="text" required maxlength="100" placeholder="اسم المتجر"></label><div class="form-grid-2"><label>هاتف المتجر<input id="settings-store-phone" type="tel" maxlength="40" placeholder="رقم للتواصل"></label><label>البريد الإلكتروني<input id="settings-email" type="email" disabled></label></div><label>عنوان المتجر / ملاحظة الإرجاع<textarea id="settings-store-address" rows="3" maxlength="300" placeholder="العنوان الذي تريده على ورقة الشحن"></textarea></label><button class="btn primary" type="submit"><i data-lucide="save"></i> حفظ الإعدادات</button></form></section>
+          <section class="panel settings-panel"><div class="settings-title"><span class="settings-icon violet"><i data-lucide="shield-check"></i></span><div><h2>الحساب والأمان</h2><p class="muted small">إدارة جلسة الدخول وبيانات الحساب.</p></div></div><div class="account-info"><div class="account-info-row"><span>البريد المسجل</span><b id="settings-account-email">—</b></div><div class="account-info-row"><span>حالة الاتصال</span><b class="connected-state"><span class="live-dot"></span> قاعدة البيانات متصلة</b></div><div class="account-info-row"><span>تخزين البيانات</span><b>قاعدة بيانات سحابية</b></div></div><button id="settings-reset-password" class="btn outline full"><i data-lucide="key-round"></i> إرسال رابط تغيير كلمة المرور</button><button id="settings-signout" class="btn danger-outline full"><i data-lucide="log-out"></i> تسجيل الخروج</button><div class="notice warning"><i data-lucide="shield-alert"></i><p>لا تشارك مفتاح Supabase السري أو كلمة مرورك. بيانات الاتصال العامة ليست بديلًا عن سياسات قاعدة البيانات؛ أبقِ سياسات RLS مفعلة.</p></div></section>
+          <section class="panel settings-panel backup-panel"><div class="settings-title"><span class="settings-icon orange"><i data-lucide="database-backup"></i></span><div><h2>النسخ الاحتياطي والتصدير</h2><p class="muted small">احتفظ بنسخة محلية إضافية من البيانات المهمة.</p></div></div><p class="muted">بياناتك الأساسية محفوظة في قاعدة البيانات السحابية. يمكنك تنزيل ملفات CSV منفصلة للطلبات والعملاء لفتحها في Excel.</p><div class="backup-actions"><button class="btn outline" id="settings-export-orders"><i data-lucide="file-spreadsheet"></i> تصدير الطلبات</button><button class="btn outline" id="settings-export-customers"><i data-lucide="contact-round"></i> تصدير العملاء</button></div><div class="notice info"><i data-lucide="cloud"></i><p>لتنزيل نسخة احتياطية كاملة من قاعدة البيانات استخدم أدوات النسخ الاحتياطي في لوحة Supabase، ولا ترفع بيانات العملاء إلى أماكن عامة.</p></div></section></div>
+      </section>
+
+      <footer class="app-footer"><span>شَحنة <span id="footer-year"></span></span><span><i data-lucide="shield-check"></i> البيانات تحت سيطرة حسابك</span><span class="footer-credit">رتّب شغلك. وخلّي الشحن أسهل.</span></footer>
+    </main>
+  </div>
+
+  <!-- Order modal -->
+  <div id="order-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="order-modal-title">
+    <div class="modal modal-wide"><div class="modal-header"><div><p class="eyebrow">تفاصيل الشحنة</p><h2 id="order-modal-title">إنشاء طلب جديد</h2><p class="muted small">املأ بيانات العميل والمنتج لمعاينة التحصيل قبل الحفظ.</p></div><button class="icon-btn modal-close" data-close-modal="order-modal" aria-label="إغلاق"><i data-lucide="x"></i></button></div>
+      <form id="order-form"><input id="order-id" type="hidden"><input id="order-customer-id" type="hidden"><div class="form-section"><div class="form-section-heading"><span class="form-section-number">01</span><div><b>بيانات المستلم</b><small>العنوان الذي سيظهر على ورقة الشحن</small></div></div><div class="form-grid-2"><label>اسم العميل <span class="required-mark">*</span><input id="order-customer-name" type="text" maxlength="120" required placeholder="الاسم بالكامل" autocomplete="name"></label><label>رقم الهاتف <span class="required-mark">*</span><input id="order-phone" type="tel" maxlength="40" required placeholder="01xxxxxxxxx" autocomplete="tel" dir="ltr"></label><label>رقم بديل<input id="order-phone-alt" type="tel" maxlength="40" placeholder="رقم إضافي للتواصل" dir="ltr"></label><label>المحافظة <span class="required-mark">*</span><input id="order-governorate" type="text" maxlength="80" required placeholder="مثال: الشرقية" list="governorates"></label><datalist id="governorates"><option value="القاهرة"><option value="الجيزة"><option value="الإسكندرية"><option value="الشرقية"><option value="الدقهلية"><option value="القليوبية"><option value="الغربية"><option value="المنوفية"><option value="البحيرة"><option value="كفر الشيخ"><option value="دمياط"><option value="بورسعيد"><option value="الإسماعيلية"><option value="السويس"><option value="شمال سيناء"><option value="جنوب سيناء"><option value="بني سويف"><option value="الفيوم"><option value="المنيا"><option value="أسيوط"><option value="سوهاج"><option value="قنا"><option value="الأقصر"><option value="أسوان"><option value="البحر الأحمر"><option value="الوادي الجديد"><option value="مطروح"><option value="مدينة الأقصر"></datalist><label>المدينة / المنطقة <span class="required-mark">*</span><input id="order-city" type="text" maxlength="100" required placeholder="المدينة أو الحي"></label></div><label>العنوان بالتفصيل <span class="required-mark">*</span><textarea id="order-address" rows="2" maxlength="500" required placeholder="اسم الشارع، رقم العمارة، الدور، علامة مميزة..."></textarea></label></div>
+        <div class="form-section"><div class="form-section-heading"><span class="form-section-number">02</span><div><b>تفاصيل المنتج</b><small>السعر والعدد والمعلومات اللازمة للتجهيز</small></div></div><div class="form-grid-2"><label>اسم المنتج <span class="required-mark">*</span><input id="order-product" type="text" maxlength="160" required placeholder="اسم المنتج أو الطلب"></label><label>كود المنتج (اختياري)<input id="order-sku" type="text" maxlength="80" placeholder="SKU / كود داخلي"></label><label>الكمية <span class="required-mark">*</span><input id="order-quantity" type="number" min="1" max="100000" step="1" value="1" required></label><label>حالة الطلب<select id="order-status"><option value="جديد">جديد</option><option value="قيد التجهيز">قيد التجهيز</option><option value="تم الشحن">تم الشحن</option><option value="تم التسليم">تم التسليم</option><option value="مرتجع">مرتجع</option><option value="ملغي">ملغي</option></select></label><label>شركة الشحن (اختياري)<input id="order-carrier" type="text" maxlength="100" placeholder="اسم شركة الشحن"></label><label>رقم التتبع (اختياري)<input id="order-tracking" type="text" maxlength="120" placeholder="رقم بوليصة الشحن"></label></div><label>ملاحظات الطلب<textarea id="order-notes" rows="2" maxlength="1000" placeholder="تعليمات للتوصيل، لون أو مقاس، ملاحظة داخلية..."></textarea></label></div>
+        <div class="form-section payment-section"><div class="form-section-heading"><span class="form-section-number">03</span><div><b>حساب المبلغ</b><small>الإجمالي المطلوب من العميل يُحسب تلقائيًا</small></div></div><div class="form-grid-2"><label>سعر القطعة (ج.م) <span class="required-mark">*</span><input id="order-price" type="number" min="0" max="100000000" step="0.01" value="0" required></label><label>مصاريف الشحن (ج.م)<input id="order-shipping" type="number" min="0" max="100000000" step="0.01" value="0" required></label><label>الخصم (ج.م)<input id="order-discount" type="number" min="0" max="100000000" step="0.01" value="0" required></label><label>مدفوع مقدمًا (ج.م)<input id="order-paid" type="number" min="0" max="100000000" step="0.01" value="0" required></label></div><div class="cod-preview"><div><span>قيمة المنتجات</span><b id="preview-products">0.00 ج.م</b></div><div><span>الشحن بعد الخصم</span><b id="preview-subtotal">0.00 ج.م</b></div><div class="cod-total"><span><i data-lucide="wallet"></i> المطلوب تحصيله عند الاستلام</span><strong id="preview-cod">0.00 ج.م</strong></div></div></div>
+        <div class="modal-footer"><span class="muted small"><i data-lucide="cloud"></i> الحفظ يتم على قاعدة البيانات السحابية</span><div><button type="button" class="btn ghost" data-close-modal="order-modal">إلغاء</button><button type="submit" id="order-save-btn" class="btn primary"><i data-lucide="save"></i> حفظ الطلب</button></div></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Quick status modal -->
+  <div id="status-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="status-modal-title"><div class="modal modal-small"><div class="modal-header"><div><p class="eyebrow">تحديث سريع</p><h2 id="status-modal-title">تغيير حالة الطلب</h2></div><button class="icon-btn" data-close-modal="status-modal" aria-label="إغلاق"><i data-lucide="x"></i></button></div><form id="status-form"><input id="status-order-id" type="hidden"><p id="status-order-number" class="muted"></p><label>الحالة الجديدة<select id="status-new-value"><option value="جديد">جديد</option><option value="قيد التجهيز">قيد التجهيز</option><option value="تم الشحن">تم الشحن</option><option value="تم التسليم">تم التسليم</option><option value="مرتجع">مرتجع</option><option value="ملغي">ملغي</option></select></label><div class="modal-footer"><button type="button" class="btn ghost" data-close-modal="status-modal">إلغاء</button><button type="submit" class="btn primary"><i data-lucide="check"></i> حفظ الحالة</button></div></form></div></div>
+
+  <!-- Customer details modal -->
+  <div id="customer-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="customer-modal-title"><div class="modal modal-small"><div class="modal-header"><div><p class="eyebrow">ملف العميل</p><h2 id="customer-modal-title">تفاصيل العميل</h2></div><button class="icon-btn" data-close-modal="customer-modal" aria-label="إغلاق"><i data-lucide="x"></i></button></div><div id="customer-detail-content"></div><div class="modal-footer"><button type="button" class="btn ghost" data-close-modal="customer-modal">إغلاق</button><button type="button" id="customer-new-order" class="btn primary"><i data-lucide="plus"></i> طلب جديد لهذا العميل</button></div></div></div>
+
+  <!-- Help modal -->
+  <div id="help-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="help-modal-title"><div class="modal modal-small"><div class="modal-header"><div><p class="eyebrow">دليل سريع</p><h2 id="help-modal-title">ابدأ في 3 خطوات</h2></div><button class="icon-btn" data-close-modal="help-modal" aria-label="إغلاق"><i data-lucide="x"></i></button></div><div class="help-steps"><div><span>1</span><section><b>أنشئ طلبًا</b><p>اكتب اسم العميل ورقمه وعنوانه والمنتج وقيمته.</p></section></div><div><span>2</span><section><b>احفظ وراجع الطلب</b><p>سيُحفظ على السحابة ويظهر في لوحة التحكم وجدول الطلبات.</p></section></div><div><span>3</span><section><b>اطبع ورقة الشحن</b><p>من قائمة إجراءات الطلب اختر الطباعة، ثم حدد مقاس الورق المناسب لطابعتك.</p></section></div><div class="notice warning"><i data-lucide="info"></i><p>تأكد من إعداد سياسات الحماية (RLS) في Supabase قبل حفظ أي بيانات عملاء حقيقية.</p></div></div><div class="modal-footer"><button type="button" class="btn primary" data-close-modal="help-modal">تمام</button></div></div></div>
+
+  <!-- Print options modal -->
+  <div id="print-options-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="print-options-title"><div class="modal modal-small"><div class="modal-header"><div><p class="eyebrow">تجهيز الطباعة</p><h2 id="print-options-title">اختار مقاس ورقة الشحن</h2><p class="muted small">اختَر المقاس المطابق للورق الموجود في الطابعة.</p></div><button class="icon-btn" data-close-modal="print-options-modal" aria-label="إغلاق"><i data-lucide="x"></i></button></div><form id="print-options-form"><label>مقاس الورق<select id="print-format"><option value="label">ملصق شحن 10 × 15 سم</option><option value="a4">ورقة A4</option></select></label><div class="notice info" style="margin-top:14px"><i data-lucide="printer"></i><p>قد تحتاج إلى اختيار نفس المقاس من إعدادات الطابعة بعد فتح نافذة الطباعة.</p></div><div class="modal-footer"><button type="button" class="btn ghost" data-close-modal="print-options-modal">إلغاء</button><button type="submit" class="btn primary"><i data-lucide="printer"></i> معاينة وطباعة</button></div></form></div></div>
+
+  <!-- Printable label -->
+  <div id="print-root" class="print-root" aria-hidden="true"><article class="print-sheet" id="print-sheet"><header class="label-header"><div class="label-brand"><span class="label-mark"><i data-lucide="package-check"></i></span><div><strong id="label-store-name">شَحنة</strong><small id="label-store-contact"></small></div></div><div class="label-tag">بيانات الشحنة</div></header><div class="label-order-strip"><span>رقم الطلب</span><b id="label-order-number">—</b><span id="label-date">—</span></div><section class="label-recipient"><h3><i data-lucide="map-pin"></i> بيانات المستلم</h3><strong id="label-customer-name">—</strong><div id="label-phone-line" class="label-phone"></div><div id="label-address">—</div></section><section class="label-product"><h3><i data-lucide="package"></i> محتويات الشحنة</h3><div class="label-product-row"><div><b id="label-product-name">—</b><small id="label-product-meta"></small></div><b id="label-product-qty">× 1</b></div><div class="label-finances"><div><span>قيمة المنتجات</span><b id="label-product-total">—</b></div><div><span>الشحن</span><b id="label-shipping">—</b></div><div><span>الخصم</span><b id="label-discount">—</b></div><div><span>مدفوع مقدمًا</span><b id="label-paid">—</b></div><div class="label-cod"><span>المطلوب تحصيله</span><strong id="label-cod-value">—</strong></div></div></section><div id="label-notes-wrap" class="label-notes"><b>ملاحظات:</b> <span id="label-notes"></span></div><div class="label-tracking"><span id="label-carrier"></span><b id="label-tracking-number"></b></div><div class="label-barcode"><div class="barcode-lines"></div><small id="label-barcode-text">—</small></div><footer class="label-footer"><span id="label-store-address"></span><span>شكرًا لثقتك بنا</span></footer></article></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
